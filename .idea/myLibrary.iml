@@ -18,7 +18,9 @@
     <option name="TEMPLATE_CONFIGURATION" value="Django" />
     <option name="TEMPLATE_FOLDERS">
       <list>
-        <option value="C:\Users\NerV\PycharmProjects\myLibrary\templates" />
+        <option value="$MODULE_DIR$/templates" />
+        <option value="$MODULE_DIR$/templates/books" />
+        <option value="$MODULE_DIR$/templates/blog" />
       </list>
     </option>
   </component>

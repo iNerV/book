@@ -36,7 +36,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'books'
+    'books',
+    'blog'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -83,6 +84,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+MEDIA_ROOT = r'C:\Users\NerV\PycharmProjects\myLibrary\media'  # FIXME не забыть поменять при заливке на боевой
+
+MEDIA_URL = '/media/'
+
 TEMPLATE_DIRS = (
     os.path.join(BASE_DIR,  'templates'),
+)
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'static'),
 )

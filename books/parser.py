@@ -1,40 +1,68 @@
 # -*- coding: UTF-8 -*-
+import os
+import sys
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+sys.path.append(r'C:\Users\NerV\PycharmProjects\myLibrary\myLibrary')  # FIXME не забыть поменять на боевом
+
+import django
+django.setup()
+
 from grab import Grab
+from books.models import Book, Author, Series, GrId, Titles, ISBN10, ISBN13, ASIN, Covers, Photos
 import logging
 import re
+import requests
 
 logger = logging.getLogger('grab')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 
-q = 1
+q = 14582711
 host = 'https://www.goodreads.com'
 g = Grab()
-g.setup(charset='utf8', timeout=4096, connect_timeout=4096)
-# ####CONSTANTS-START######
-title = []
-original_title = ''
-isbn13 = []
-isbn = []
-asin = []
-lang = ''
-en_desc = ''
-ru_desc = ''
-other_desc = ''
-series = ''
-num_series = ''
-series_name = ''
-cover = ''
-url = []
-author_link = ''
-author = ''
-photo = ''
-gender = ''
-birth_date = ''
-site = ''
-# ####CONSTANTS-END######
+g.setup(charset='utf8', timeout=160000, connect_timeout=160000)
 
-while q <= 1:
+
+# isbn converter
+def check_digit_10(isbn):
+    assert len(isbn) == 9
+    sum = 0
+    for i in range(len(isbn)):
+        c = int(isbn[i])
+        w = i + 1
+        sum += w * c
+    r = sum % 11
+    if r == 10:
+        return isbn + 'X'
+    else:
+        return isbn + str(r)
+
+# start parser
+while q <= 14582711:
+    # ####CONSTANTS-START######
+    title = set([])
+    original_title = ''
+    isbn13 = []
+    isbn = []
+    asin = []
+    lang = ''
+    en_desc = ''
+    ru_desc = ''
+    other_desc = ''
+    series = ''
+    num_series = ''
+    series_name = ''
+    covers = []
+    cover_name = ''
+    url = []
+    author_link = ''
+    author = ''
+    photo = ''
+    gender = ''
+    birth_date = ''
+    site = ''
+    # ####CONSTANTS-END######
     try:
         try:
             g = Grab()
@@ -70,12 +98,19 @@ while q <= 1:
                 pass
 
             try:
-                photo = g2.doc.select('//div[contains(@class, "leftContainer")]').select('..//img').attr("src")
+
+                p_a = requests.get(re.sub(r'p5', 'p8', g2.doc.select('//div[contains(@class, "leftContainer")]').select('..//img').attr("src")))
+                photo = g2.doc.select('//div[contains(@class, "leftContainer")]').select('..//img').attr("src").split('/')[5]
+                photo = re.sub(r'p5', 'p8', photo)
+                out = open(r"../media/authors_photo/"+photo, "wb")
+                out.write(p_a.content)
+                out.close()
                 if 'nophoto' in photo:
-                    cover = 'https://s.gr-assets.com/assets/nophoto/book/blank-133x176-99d2cd1a7cf8ae9ed346e75dda60b54b.jpg'
+                    photo = 'no_photo.png'
                 else:
                     print('Photo: '+photo)  # Photo
             except IndexError:
+                photo = 'no_photo.png'
                 print('Photo Error')  # test
                 pass
 
@@ -132,28 +167,24 @@ while q <= 1:
                         pass
 
                 except IndexError:
-                    print('title:')
-                    print(set(list(title)))
-                    print('isbn:')
-                    print(list(isbn))
-                    print('isbn13:')
-                    print(list(isbn13))
-                    print('asin:')
-                    print(list(asin))
-                    print('url:')
-                    print(list(url))
-                    print()
-
-                    print('Lang: '+lang)  # Lang
-                    print('Original title: '+original_title)  # orig. title
-                    print('Num in series: '+num_series)  # series
-                    print('series name: '+series_name)  # series
-                    print('series: '+series)  # series
-
-                    print('OTHER Description: '+other_desc)  # description
-                    print('EN Description: '+en_desc)  # description
-                    print('RU Description: '+ru_desc)  # description
-
+                    b, created = Book.objects.get_or_create(title=original_title, gr_id=q, ru_desc=ru_desc, en_desc=en_desc, num_series=num_series)
+                    s, created = Series.objects.get_or_create(gr_id=series, name=series_name)
+                    b.series.add(s)
+                    a, created = Author.objects.get_or_create(name=author, gender=gender, birth_date=birth_date, site=site)
+                    b.author.add(a)
+                    for val in url:
+                        grid, created = GrId.objects.get_or_create(gr_id=val)
+                    for val in isbn:
+                        isbn10db, created = ISBN10.objects.get_or_create(isbn10=val, book=b)
+                    for val in isbn13:
+                        isbn13db, created = ISBN13.objects.get_or_create(isbn13=val, book=b)
+                    for val in asin:
+                        asindb, created = ASIN.objects.get_or_create(asin=val, book=b)
+                    for val in title:
+                        titledb, created = Titles.objects.get_or_create(title=val, book=b)
+                    for val in covers:
+                        covers, created = Covers.objects.get_or_create(cover=val, book=b)
+                    photos, created = Photos.objects.get_or_create(photo='authors_photo/'+photo, author=a)
                     q += 1
                     break
 
@@ -169,20 +200,16 @@ while q <= 1:
                     print('Lang Error')  # test
                     pass
 
-                url.append(str(re.search('[\d]+', g3.response.url).group()))  # url
+                url.append(str(re.search('[\d]+', g3.response.url).group()).strip())  # url
 
                 try:
-                    if lang != 'English' and lang != 'Russian' and other_desc == '':
-                        other_desc = g3.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
-                    elif lang == 'English' and en_desc == '':
+                    if lang == 'English' and en_desc == '':
                         en_desc = g3.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
                     elif lang == 'Russian' and ru_desc == '':
                         ru_desc = g3.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
                 except IndexError:
                     try:
-                        if lang != 'English' and lang != 'Russian' and other_desc == '':
-                            other_desc = g3.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
-                        elif lang == 'English' and en_desc == '':
+                        if lang == 'English' and en_desc == '':
                             en_desc = g3.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
                         elif lang == 'Russian' and ru_desc == '':
                             ru_desc = g3.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
@@ -191,14 +218,14 @@ while q <= 1:
                         pass
 
                 try:
-                    cover = g3.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src")
+                    p = requests.get(g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src"))
+                    cover_name = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src").split('/')[5]
+                    out = open(r"../media/covers/"+cover_name, "wb")
+                    out.write(p.content)
+                    out.close()
+                    covers.append('covers/'+cover_name)
                 except IndexError:
-                    cover = 'https://s.gr-assets.com/assets/nophoto/book/blank-133x176-99d2cd1a7cf8ae9ed346e75dda60b54b.jpg'
-
-                if 'nophoto' in cover:
-                    cover = 'https://s.gr-assets.com/assets/nophoto/book/blank-133x176-99d2cd1a7cf8ae9ed346e75dda60b54b.jpg'
-                else:
-                    print('cover: '+cover)  # cover
+                    pass
 
                 try:
                     series = g3.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].attr("href").split('/')[2].rsplit('-')[0]
@@ -219,116 +246,106 @@ while q <= 1:
                     pass
 
                 if g4.doc.text_search(u'ISBN:'):
-                    isbn.append(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text().split('(')[0])  # isbn10
+                    isbn.append(str(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text().split('(')[0]).strip())  # isbn10
                     try:
-                        isbn13.append(re.sub(r'ISBN13: ', '', g4.doc.select('//div[contains(@class, "dataValue")]')[1].text().split('(')[1][:-1]))  # isbn13
+                        isbn13.append(str(re.sub(r'ISBN13: ', '', g4.doc.select('//div[contains(@class, "dataValue")]')[1].text().split('(')[1][:-1])).strip())  # isbn13
                     except IndexError:
                         pass
                 elif g4.doc.text_search(u'ISBN13:'):
-                    isbn13.append(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text())  # isbn13
+                    isbn13.append(str(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text()).strip())  # isbn13
                 elif g4.doc.text_search(u'ASIN:'):
-                    asin.append(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text())  # asin
+                    asin.append(str(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text()).strip())  # asin
                 q2 += 1
             # ####OTHER EDITIONS-END#####
 
         # ####NO OTHER EDITIONS-START#####
         except IndexError:
             try:
-                title = g.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0]
-                print('Title: '+title)  # title
+                title = g.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0]  # title
             except IndexError:
                 print('title Error / No Book Error')  # test
                 pass
 
             try:
                 original_title = g.doc.select('//div[contains(@class, "infoBoxRowItem")]')[0].text()  # orig. title
-                print('Original title: '+original_title)  # orig. title
             except IndexError:
                 print('Original title Error')  # test
                 pass
 
             try:
-                cover = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src")
+                p = requests.get(g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src"))
+                cover_name = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src").split('/')[5]
+                out = open(r"../media/covers/"+cover_name, "wb")
+                out.write(p.content)
+                out.close()
             except IndexError:
-                cover = 'https://s.gr-assets.com/assets/nophoto/book/blank-133x176-99d2cd1a7cf8ae9ed346e75dda60b54b.jpg'
-
-            if 'nophoto' in cover:
-                cover = 'https://s.gr-assets.com/assets/nophoto/book/blank-133x176-99d2cd1a7cf8ae9ed346e75dda60b54b.jpg'
-            else:
-                print('cover: '+cover)  # cover
+                cover_name = 'no_cover.png'
+                pass
 
             try:
                 if g.doc.text_search(u'ISBN13'):
-                    isbn13 = g.doc.select('//*[contains(@itemprop, "isbn")]').text()
-                    print('ISBN13: '+isbn13)  # ISBN13
+                    isbn13 = g.doc.select('//*[contains(@itemprop, "isbn")]').text().strip()  # ISBN13
                 elif g.doc.text_search(u'ASIN'):
-                    asin = g.doc.select('//*[contains(@itemprop, "isbn")]').text()
-                    print('ASIN: '+asin)  # ASIN
+                    asin = str(g.doc.select('//div[contains(@class, "dataValue")]')[1].text()).strip()  # ASIN
             except IndexError:
                 print('ISBN13/ASIN Error')  # test
                 pass
 
             try:
-                lang = g.doc.select('//div[contains(@itemprop, "inLanguage")]').text()
-                print('Lang: '+lang)  # Lang
+                lang = g.doc.select('//div[contains(@itemprop, "inLanguage")]').text()  # Lang
             except IndexError:
                 print('Lang Error')  # test
                 pass
 
             try:
-                if lang != 'English' and lang != 'Russian':
-                    other_desc = g.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
-                    print('OTHER Description: '+other_desc)  # description
-                elif lang == 'English' and en_desc == '':
-                    en_desc = g.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
-                    print('EN Description: '+en_desc)  # description
+                if lang == 'English' and en_desc == '':
+                    en_desc = g.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]  # description
                 elif lang == 'Russian' and ru_desc == '':
-                    ru_desc = g.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]
-                    print('RU Description: '+ru_desc)  # description
+                    ru_desc = g.doc.select('//div[contains(@id, "description")]/span')[1].text().rsplit('(less)')[0]  # description
             except IndexError:
                 try:
-                    if lang != 'English' and lang != 'Russian' and other_desc == '':
-                        other_desc = g.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
-                        print('OTHER Description: '+other_desc)  # description
-                    elif lang == 'English' and en_desc == '':
-                        en_desc = g.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
-                        print('EN Description: '+en_desc)  # description
+                    if lang == 'English' and en_desc == '':
+                        en_desc = g.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]  # description
                     elif lang == 'Russian' and ru_desc == '':
-                        ru_desc = g.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]
-                        print('RU Description: '+ru_desc)  # description
+                        ru_desc = g.doc.select('//div[contains(@id, "description")]/span')[0].text().rsplit('(less)')[0]  # description
                 except IndexError:
                     print('desc Error out')  # test
                     pass
 
             try:
-                series = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].attr("href").split('/')[2].rsplit('-')[0]
-                print('series: '+series)  # series
+                series = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].attr("href").split('/')[2].rsplit('-')[0]  # series url
             except IndexError:
                 print('series error')  # test
                 pass
 
             try:
-                series_name = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].text().split('(')[1].rsplit('#')[0]
-                print('series name: '+series_name)  # series
+                series_name = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].text().split('(')[1].rsplit('#')[0]  # series name
             except IndexError:
                 print('series name error')  # test
                 pass
 
             try:
-                num_series = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].text().split('(')[1].rsplit('#')[1].rsplit(')')[0]
-                print('Num in series: '+num_series)  # series
+                num_series = g.doc.select('//h1[contains(@class, "bookTitle")]//a')[0].text().split('(')[1].rsplit('#')[1].rsplit(')')[0]  # num in series
             except IndexError:
                 print('Num in series error')  # test
                 pass
 
             url = str(re.search('[\d]+', g.response.url).group())  # url
-            print('URL: '+url)
+
+            b, created = Book.objects.get_or_create(title=original_title, gr_id=q, ru_desc=ru_desc, en_desc=en_desc, num_series=num_series)
+            s, created = Series.objects.get_or_create(gr_id=series, name=series_name)
+            b.series.add(s)
+            a, created = Author.objects.get_or_create(name=author, gender=gender, birth_date=birth_date, site=site)
+            b.author.add(a)
+            grid, created = GrId.objects.get_or_create(gr_id=url)
+            isbn10db, created = ISBN10.objects.get_or_create(isbn10=check_digit_10(isbn13[3:-1]), book=b)
+            isbn13db, created = ISBN13.objects.get_or_create(isbn13=isbn13, book=b)
+            if asin:
+                asindb, created = ASIN.objects.get_or_create(asin=asin, book=b)
+            covers, created = Covers.objects.get_or_create(cover='covers/'+cover_name, book=b)
+            photos, created = Photos.objects.get_or_create(photo='authors_photo/'+photo, author=a)
+
             q += 1
         # ####NO OTHER EDITIONS-END#####
     except IndexError:
         print('PROBLEM, While STOP!!!')  # test
-
-# values = ['abc', 'def', 'ghi']
-# a list of unsaved Entry model instances
-# aList = [Entry(headline=val) for val in values]
-# Entry.objects.bulk_create(aList)
