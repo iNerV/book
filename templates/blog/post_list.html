@@ -1,9 +1,15 @@
-{% extends 'blog/base.html' %}
+{% extends 'main.html' %}
 {% block content %}
     {% for post in object_list %}
-        <h2><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
-        <p>{{ post.datetime }}</p>
-        <p>{{ post.content_short }}</p>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h3>
+            </div>
+            <div class="panel-body">
+                <p>{{ post.datetime }}</p>
+                <p>{{ post.content_short }}</p>
+            </div>
+        </div>
     {% empty %}
     <p>Нет постов</p>
     {% endfor %}

@@ -1,0 +1,15 @@
+{% extends 'main.html' %}
+{% block content %}
+    <h2>{{ series.name }}</h2>
+    {% if series.desc %}
+        <p>{{ series.desc }}</p>
+    {% else %}
+        <p>Нет описания</p>
+    {% endif %}
+    <hr />
+    {% for book in books %}
+        <p><a href="{% url 'detail' book.id %}">{{ book }}</a></p>
+    {% empty %}
+    <p>Нет книг</p>
+    {% endfor %}
+{% endblock %}
