@@ -1,6 +1,5 @@
 from django.db import models
 from django.core.urlresolvers import reverse
-from users.models import MyUser
 
 
 class Author(models.Model):
@@ -75,9 +74,3 @@ class Covers(models.Model):
 class Photos(models.Model):
     photo = models.ImageField(upload_to='authors_photo/', max_length=200, null=True)
     author = models.ForeignKey(Author, blank=True, null=True)
-
-
-class Rating(models.Model):
-    book = models.ForeignKey(Book)
-    user = models.ForeignKey(MyUser)
-    rating = models.IntegerField()

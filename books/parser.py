@@ -13,12 +13,13 @@ from books.models import Book, Author, Series, GrId, Titles, ISBN10, ISBN13, ASI
 import logging
 import re
 import requests
+from datetime import datetime
 
 logger = logging.getLogger('grab')
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.DEBUG)
 
-q = 14582711
+q = 14582712
 host = 'https://www.goodreads.com'
 g = Grab()
 g.setup(charset='utf8', timeout=160000, connect_timeout=160000)
@@ -39,9 +40,9 @@ def check_digit_10(isbn):
         return isbn + str(r)
 
 # start parser
-while q <= 14582711:
+while q <= 14582712:
     # ####CONSTANTS-START######
-    title = set([])
+    title = []
     original_title = ''
     isbn13 = []
     isbn = []
@@ -60,7 +61,7 @@ while q <= 14582711:
     author = ''
     photo = ''
     gender = ''
-    birth_date = ''
+    birth_date = '0001-01-01'
     site = ''
     # ####CONSTANTS-END######
     try:
@@ -105,12 +106,12 @@ while q <= 14582711:
                 out = open(r"../media/authors_photo/"+photo, "wb")
                 out.write(p_a.content)
                 out.close()
-                if 'nophoto' in photo:
-                    photo = 'no_photo.png'
+                if 'user' in photo:
+                    photo = 'no_photo.png'  # FIXME сделать обработку в другом месте. После загрузки нормального ковра этот не удалится, так нельзя.
                 else:
                     print('Photo: '+photo)  # Photo
             except IndexError:
-                photo = 'no_photo.png'
+                photo = 'no_photo.png'  # FIXME сделать обработку в другом месте
                 print('Photo Error')  # test
                 pass
 
@@ -122,7 +123,7 @@ while q <= 14582711:
                 pass
 
             try:
-                birth_date = g2.doc.select('//div[contains(@itemprop, "birthDate")]').text()
+                birth_date = datetime.strptime(g2.doc.select('//div[contains(@itemprop, "birthDate")]').text(), '%B %d, %Y')
                 print(birth_date)  # birthDate
             except IndexError:
                 print('birthDate Error')  # test
@@ -161,7 +162,7 @@ while q <= 14582711:
                     g3.go(host+book_link)
 
                     try:
-                        title.append(g3.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0])  # title
+                        title.append(g3.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0])  # title  # FIXME set() настроить
                     except IndexError:
                         print('Title Error')  # test
                         pass
@@ -170,8 +171,9 @@ while q <= 14582711:
                     b, created = Book.objects.get_or_create(title=original_title, gr_id=q, ru_desc=ru_desc, en_desc=en_desc, num_series=num_series)
                     s, created = Series.objects.get_or_create(gr_id=series, name=series_name)
                     b.series.add(s)
-                    a, created = Author.objects.get_or_create(name=author, gender=gender, birth_date=birth_date, site=site)
+                    a, created = Author.objects.get_or_create(author_id=author_link)
                     b.author.add(a)
+                    Author.objects.filter(author_id=author_link).update(name=author, gender=gender, birth_date=birth_date, site=site)
                     for val in url:
                         grid, created = GrId.objects.get_or_create(gr_id=val)
                     for val in isbn:
@@ -180,7 +182,7 @@ while q <= 14582711:
                         isbn13db, created = ISBN13.objects.get_or_create(isbn13=val, book=b)
                     for val in asin:
                         asindb, created = ASIN.objects.get_or_create(asin=val, book=b)
-                    for val in title:
+                    for val in set(title):
                         titledb, created = Titles.objects.get_or_create(title=val, book=b)
                     for val in covers:
                         covers, created = Covers.objects.get_or_create(cover=val, book=b)
@@ -279,7 +281,7 @@ while q <= 14582711:
                 out.write(p.content)
                 out.close()
             except IndexError:
-                cover_name = 'no_cover.png'
+                cover_name = 'no_cover.png'  # FIXME сделать обработку в другом месте
                 pass
 
             try:
@@ -335,8 +337,9 @@ while q <= 14582711:
             b, created = Book.objects.get_or_create(title=original_title, gr_id=q, ru_desc=ru_desc, en_desc=en_desc, num_series=num_series)
             s, created = Series.objects.get_or_create(gr_id=series, name=series_name)
             b.series.add(s)
-            a, created = Author.objects.get_or_create(name=author, gender=gender, birth_date=birth_date, site=site)
+            a, created = Author.objects.get_or_create(author_id=author_link)
             b.author.add(a)
+            Author.objects.filter(author_id=author_link).update(name=author, gender=gender, birth_date=birth_date, site=site)
             grid, created = GrId.objects.get_or_create(gr_id=url)
             isbn10db, created = ISBN10.objects.get_or_create(isbn10=check_digit_10(isbn13[3:-1]), book=b)
             isbn13db, created = ISBN13.objects.get_or_create(isbn13=isbn13, book=b)

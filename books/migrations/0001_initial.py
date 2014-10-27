@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ASIN',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('asin', models.CharField(max_length=10)),
             ],
             options={
@@ -23,12 +23,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Author',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
-                ('name', models.CharField(max_length=200)),
-                ('photo', models.ImageField(max_length=200, upload_to='/', null=True)),
-                ('gender', models.CharField(blank=True, max_length=6, null=True)),
-                ('birth_date', models.CharField(blank=True, max_length=200, null=True)),
-                ('site', models.URLField(blank=True, null=True)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=200, null=True)),
+                ('author_id', models.CharField(max_length=200)),
+                ('gender', models.CharField(max_length=6, null=True, blank=True)),
+                ('birth_date', models.DateField(null=True, blank=True)),
+                ('site', models.URLField(null=True, blank=True)),
             ],
             options={
             },
@@ -37,14 +37,24 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Book',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=400)),
                 ('ru_desc', models.TextField(null=True)),
                 ('en_desc', models.TextField(null=True)),
-                ('other_desc', models.TextField(null=True)),
-                ('book_cover', models.ImageField(max_length=200, upload_to='/')),
-                ('num_series', models.PositiveIntegerField(blank=True, null=True)),
+                ('num_series', models.PositiveIntegerField(null=True, blank=True)),
                 ('gr_id', models.PositiveIntegerField()),
+                ('author', models.ManyToManyField(to='books.Author')),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
+            name='Covers',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('cover', models.ImageField(max_length=200, upload_to='/covers/')),
+                ('book', models.ForeignKey(null=True, to='books.Book', blank=True)),
             ],
             options={
             },
@@ -53,7 +63,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='GrId',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('gr_id', models.PositiveIntegerField()),
             ],
             options={
@@ -63,8 +73,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ISBN10',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
-                ('isbn10', models.PositiveIntegerField(max_length=10)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('isbn10', models.CharField(max_length=10)),
+                ('book', models.ForeignKey(null=True, to='books.Book', blank=True)),
             ],
             options={
             },
@@ -73,8 +84,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ISBN13',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
-                ('isbn13', models.PositiveIntegerField(max_length=13)),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('isbn13', models.CharField(max_length=13)),
+                ('book', models.ForeignKey(null=True, to='books.Book', blank=True)),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
+            name='Photos',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('photo', models.ImageField(max_length=200, upload_to='/authors_photo/', null=True)),
+                ('author', models.ForeignKey(null=True, to='books.Author', blank=True)),
             ],
             options={
             },
@@ -83,10 +106,10 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Series',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('gr_id', models.PositiveIntegerField()),
                 ('name', models.CharField(max_length=200)),
-                ('desc', models.TextField(blank=True, null=True)),
+                ('desc', models.TextField(null=True, blank=True)),
             ],
             options={
             },
@@ -95,8 +118,9 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Titles',
             fields=[
-                ('id', models.AutoField(auto_created=True, serialize=False, primary_key=True, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=400)),
+                ('book', models.ForeignKey(null=True, to='books.Book', blank=True)),
             ],
             options={
             },
@@ -104,38 +128,14 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='book',
-            name='all_titles',
-            field=models.ForeignKey(blank=True, null=True, to='books.Titles'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='book',
-            name='asin',
-            field=models.ManyToManyField(blank=True, null=True, to='books.ASIN'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='book',
-            name='author',
-            field=models.ManyToManyField(to='books.Author'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='book',
-            name='isbn10',
-            field=models.ManyToManyField(blank=True, null=True, to='books.ISBN10'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='book',
-            name='isbn13',
-            field=models.ManyToManyField(blank=True, null=True, to='books.ISBN13'),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='book',
             name='series',
-            field=models.ManyToManyField(blank=True, null=True, to='books.Series'),
+            field=models.ManyToManyField(to='books.Series', null=True, blank=True),
+            preserve_default=True,
+        ),
+        migrations.AddField(
+            model_name='asin',
+            name='book',
+            field=models.ForeignKey(null=True, to='books.Book', blank=True),
             preserve_default=True,
         ),
     ]
