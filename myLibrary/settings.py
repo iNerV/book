@@ -99,7 +99,7 @@ STATICFILES_DIRS = (
 
 AUTH_USER_MODEL = 'users.MyUser'
 
-LOGIN_REDIRECT_URL = '/admin/'
+LOGIN_REDIRECT_URL = '/admin/'  # FIXME ну нев адмрку же редиректить хД
 
 TEMPLATE_CONTEXT_PROCESSORS = ("django.contrib.auth.context_processors.auth",
 "django.core.context_processors.debug",

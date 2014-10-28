@@ -81,3 +81,6 @@ class Rating(models.Model):
     book = models.ForeignKey(Book)
     user = models.ForeignKey(MyUser)
     rating = models.IntegerField()
+
+    def __str__(self):
+        return self.rating

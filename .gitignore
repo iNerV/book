@@ -62,3 +62,4 @@ settings.py
 
 # directories to ignore
 .idea/
+migrations/

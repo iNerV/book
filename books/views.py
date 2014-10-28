@@ -1,8 +1,10 @@
 from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
 # from django.http import HttpResponseRedirect
 # from django.core.urlresolvers import reverse
 # from django.views import generic
-from books.models import Book, Author, ISBN10, ISBN13, ASIN, Series, Titles, Covers, Photos
+from books.models import Book, Author, ISBN10, ISBN13, ASIN, Series, Titles, Covers, Photos, Rating
+from users.models import MyUser
 
 
 def books_index(request):
@@ -55,3 +57,8 @@ def series_detail(request, series_id):
         'series': series_info,
         'books': books,
     })
+
+
+def vote(request, pk, model):
+    user = request.user
+    obj = get_object_or_404(model, pk=pk)
