@@ -1,0 +1,10 @@
+{% extends 'main.html' %}
+{% block content %}
+    <div class="well bs-component">
+            <form method="post" class="form-horizontal" action="/blog/add_post/">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="submit-button btn btn-small">Submit</button>
+        </form>
+    </div>
+{% endblock %}

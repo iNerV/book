@@ -1,9 +1,10 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 # from django.http import HttpResponseRedirect
 # from django.core.urlresolvers import reverse
 # from django.views import generic
-from books.models import Book, Author, ISBN10, ISBN13, ASIN, Series, Titles, Covers, Photos, Rating
+from books.models import Book, Author, ISBN10, ISBN13, ASIN, Series, Titles, Covers, Photos, Rating, RuDesc, EnDesc
+from books.forms import *  # FIXME
 from users.models import MyUser
 
 
@@ -27,6 +28,8 @@ def book_detail(request, book_id):
     asin = ASIN.objects.filter(book=book_id)
     title = Titles.objects.filter(book=book_id)
     cover = Covers.objects.filter(book=book_id)
+    ru_desc = RuDesc.objects.get(book=book_id, active=True)
+    en_desc = EnDesc.objects.get(book=book_id, active=True)
     return render(request, 'books/book_detail.html', {
         'book': book,
         'author': author,
@@ -36,6 +39,8 @@ def book_detail(request, book_id):
         'asin': asin,
         'title': title,
         'cover': cover,
+        'ru_desc': ru_desc,
+        'en_desc': en_desc,
     })
 
 

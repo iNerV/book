@@ -6,6 +6,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 sys.path.append(r'C:\Users\NerV\PycharmProjects\myLibrary\myLibrary')  # FIXME не забыть поменять на боевом
 
 import django
+
 django.setup()
 
 from grab import Grab
@@ -67,7 +68,7 @@ while q <= 14582712:
     try:
         try:
             g = Grab()
-            g.go(host+str('/book/show/')+str(q))
+            g.go(host + str('/book/show/') + str(q))
             # g.proxylist.set_source('file', location='proxy.txt')
             print(g.response.headers.get('Status'))
             status = g.response.headers.get('Status')
@@ -89,7 +90,7 @@ while q <= 14582712:
             # g2.proxylist.set_source('file', location='proxy.txt')
             g2.setup(charset='utf8', timeout=30, connect_timeout=40)
             author_link = g.doc.select('//a[contains(@class, "authorName")]')[0].attr("href").split('/')[5].rsplit('.')[0]
-            g2.go(host+'/author/show/'+str(author_link))
+            g2.go(host + '/author/show/' + str(author_link))
 
             try:
                 author = g2.doc.select('//h1[contains(@class, "authorName")]').text()  # AuthorName
@@ -103,13 +104,13 @@ while q <= 14582712:
                 p_a = requests.get(re.sub(r'p5', 'p8', g2.doc.select('//div[contains(@class, "leftContainer")]').select('..//img').attr("src")))
                 photo = g2.doc.select('//div[contains(@class, "leftContainer")]').select('..//img').attr("src").split('/')[5]
                 photo = re.sub(r'p5', 'p8', photo)
-                out = open(r"../media/authors_photo/"+photo, "wb")
+                out = open(r"../media/authors_photo/" + photo, "wb")
                 out.write(p_a.content)
                 out.close()
                 if 'user' in photo:
                     photo = 'no_photo.png'  # FIXME сделать обработку в другом месте. После загрузки нормального ковра этот не удалится, так нельзя.
                 else:
-                    print('Photo: '+photo)  # Photo
+                    print('Photo: ' + photo)  # Photo
             except IndexError:
                 photo = 'no_photo.png'  # FIXME сделать обработку в другом месте
                 print('Photo Error')  # test
@@ -150,7 +151,7 @@ while q <= 14582712:
                     g4 = Grab()
                     # g4.proxylist.set_source('file', location='proxy.txt')
                     g4.setup(charset='utf8', timeout=30, connect_timeout=40)
-                    g4.go(host+'/work/editions/'+str(other_editions)+'?page='+str(q2)+'&per_page='+str(1)+'&utf8='+str(1))
+                    g4.go(host + '/work/editions/' + str(other_editions) + '?page=' + str(q2) + '&per_page=' + str(1) + '&utf8=' + str(1))
                 except NameError:
                     pass
 
@@ -159,16 +160,16 @@ while q <= 14582712:
                     # g3.proxylist.set_source('file', location='proxy.txt')
                     g3.setup(charset='utf8', timeout=30, connect_timeout=40)
                     book_link = str(g4.doc.select('//div[contains(@class, "dataRow")]/a')[0].attr("href"))
-                    g3.go(host+book_link)
+                    g3.go(host + book_link)
 
                     try:
-                        title.append(g3.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0])  # title  # FIXME set() настроить
+                        title.append(g3.doc.select('//h1[contains(@class, "bookTitle")]').text().split(' (')[0])  # title
                     except IndexError:
                         print('Title Error')  # test
                         pass
 
                 except IndexError:
-                    b, created = Book.objects.get_or_create(title=original_title, gr_id=q, ru_desc=ru_desc, en_desc=en_desc, num_series=num_series)
+                    b, created = Book.objects.get_or_create(title=original_title, gr_id=q, num_series=num_series, ru_desc=ru_desc, en_desc=en_desc)
                     s, created = Series.objects.get_or_create(gr_id=series, name=series_name)
                     b.series.add(s)
                     a, created = Author.objects.get_or_create(author_id=author_link)
@@ -186,7 +187,7 @@ while q <= 14582712:
                         titledb, created = Titles.objects.get_or_create(title=val, book=b)
                     for val in covers:
                         covers, created = Covers.objects.get_or_create(cover=val, book=b)
-                    photos, created = Photos.objects.get_or_create(photo='authors_photo/'+photo, author=a)
+                    photos, created = Photos.objects.get_or_create(photo='authors_photo/' + photo, author=a)
                     q += 1
                     break
 
@@ -221,11 +222,11 @@ while q <= 14582712:
 
                 try:
                     p = requests.get(g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src"))
-                    cover_name = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src").split('/')[5]
-                    out = open(r"../media/covers/"+cover_name, "wb")
+                    cover_name = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src").split('/')[5]  # FIXME добавить соль в виде даты/времени
+                    out = open(r"../media/covers/" + cover_name, "wb")  # FIXME протестировать как будет сохраняться с солью
                     out.write(p.content)
                     out.close()
-                    covers.append('covers/'+cover_name)
+                    covers.append('covers/' + cover_name)
                 except IndexError:
                     pass
 
@@ -258,7 +259,7 @@ while q <= 14582712:
                 elif g4.doc.text_search(u'ASIN:'):
                     asin.append(str(g4.doc.select('//div[contains(@class, "dataValue")]')[1].text()).strip())  # asin
                 q2 += 1
-            # ####OTHER EDITIONS-END#####
+                # ####OTHER EDITIONS-END#####
 
         # ####NO OTHER EDITIONS-START#####
         except IndexError:
@@ -277,7 +278,7 @@ while q <= 14582712:
             try:
                 p = requests.get(g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src"))
                 cover_name = g.doc.select('//div[contains(@class, "bookCoverPrimary")]/a').select('.//img').attr("src").split('/')[5]
-                out = open(r"../media/covers/"+cover_name, "wb")
+                out = open(r"../media/covers/" + cover_name, "wb")
                 out.write(p.content)
                 out.close()
             except IndexError:
@@ -345,10 +346,10 @@ while q <= 14582712:
             isbn13db, created = ISBN13.objects.get_or_create(isbn13=isbn13, book=b)
             if asin:
                 asindb, created = ASIN.objects.get_or_create(asin=asin, book=b)
-            covers, created = Covers.objects.get_or_create(cover='covers/'+cover_name, book=b)
-            photos, created = Photos.objects.get_or_create(photo='authors_photo/'+photo, author=a)
+            covers, created = Covers.objects.get_or_create(cover='covers/' + cover_name, book=b)
+            photos, created = Photos.objects.get_or_create(photo='authors_photo/' + photo, author=a)
 
             q += 1
-        # ####NO OTHER EDITIONS-END#####
+            # ####NO OTHER EDITIONS-END#####
     except IndexError:
         print('PROBLEM, While STOP!!!')  # test
